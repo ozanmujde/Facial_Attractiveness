@@ -27,9 +27,9 @@ def process_data():
         test_dataset=test_generator,
     )
     print("test_generator", len(test_generator.classes))
-    cnnModel = cnn.build_model()
-    cnn.train_and_evaluate(cnnModel, epochs=50, batch_size=32)
-    # cnn.tune_model(train_generator, validation_generator, epochs=10, batch_size=32)
+    # cnnModel = cnn.build_model()
+    # cnn.train_and_evaluate(cnnModel, epochs=50, batch_size=32)
+    cnn.tune_model(train_generator, validation_generator, epochs=50, batch_size=32)
     # cnn.build_model(train_generator, validation_generator, epochs=10, batch_size=32)
 
 

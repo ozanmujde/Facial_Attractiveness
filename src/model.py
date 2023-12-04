@@ -1,3 +1,4 @@
+import random
 from keras import layers, models, optimizers, initializers, regularizers
 from keras import losses
 import tensorflow as tf
@@ -17,6 +18,10 @@ class CNN(kt.HyperModel):
         self, input_shape, num_classes, train_dataset, validation_dataset, test_dataset
     ):
         super().__init__()
+        seed = 42
+        random.seed(seed)
+        tf.random.set_seed(seed)
+        np.random.seed(seed)
         self.input_shape = input_shape
         self.num_classes = num_classes
         self.train_dataset = train_dataset
@@ -35,20 +40,28 @@ class CNN(kt.HyperModel):
         :param input_shape: tuple
         :param hp: HyperParameters
         """
-        # TODO play with it
         model = models.Sequential()
         kernel_size = hp.Choice("kernel_size", values=[1, 3, 5])
+        first_filter_size = hp.Choice("first_filter_size", values=[32, 64, 128])
+        filter_size = hp.Choice("filter_size", values=[64, 128, 256])
+        l2_learning_rate = hp.Float(
+            "l2_learning_rate",
+            min_value=1e-4,
+            max_value=1e-2,
+            sampling="LOG",
+            default=1e-3,
+        )
         model.add(
             layers.Conv2D(
-                32, kernel_size, activation="relu", input_shape=self.input_shape
+                first_filter_size, kernel_size, activation="relu", input_shape=self.input_shape,
             )
         )
         model.add(layers.BatchNormalization())
         model.add(layers.MaxPooling2D((2, 2)))
-        model.add(layers.Conv2D(64, kernel_size, activation="relu"))
+        model.add(layers.Conv2D(filter_size, kernel_size, activation="relu"))
         model.add(layers.BatchNormalization())
         model.add(layers.MaxPooling2D((2, 2)))
-        model.add(layers.Conv2D(64, kernel_size, activation="relu"))
+        model.add(layers.Conv2D(filter_size, kernel_size, activation="relu"))
         model.add(layers.BatchNormalization())
         model.add(layers.Flatten())
         model.add(
@@ -56,9 +69,9 @@ class CNN(kt.HyperModel):
                 hp.Int("units", min_value=32, max_value=256, step=32), activation="relu"
             )
         )
-        model.add()
+        model.add(layers.BatchNormalization())
         # add kernel_regularizer
-        model.add(layers.Dropout(0.25))
+        model.add(layers.Dropout(hp.Float("dropout", 0, 0.5, step=0.1)))
         model.add(layers.Dense(1))
 
         # Tune the learning rate for the optimizer
@@ -72,7 +85,7 @@ class CNN(kt.HyperModel):
         )
         model.compile(
             optimizer=optimizers.legacy.Adam(learning_rate=hp_learning_rate),
-            loss="mse",
+            loss=hp.Choice('loss_function',["mse", "mae"]),
             metrics=["MAE"],
         )
         model.summary()
@@ -103,7 +116,7 @@ class CNN(kt.HyperModel):
         """
         :return:
         """
-        initializer = initializers.GlorotNormal()
+        initializer = initializers.RandomNormal()
         model = models.Sequential()
         model.add(
             layers.Conv2D(
@@ -147,16 +160,16 @@ class CNN(kt.HyperModel):
                 kernel_regularizer=regularizers.l2(0.001),
             )
         )
-
+        model.add(layers.BatchNormalization())
         # add kernel_regularizer
-        model.add(layers.Dropout(0.1))
+        model.add(layers.Dropout(0.3))
         model.add(layers.Dense(1))
 
         # Tune the learning rate for the optimizer
         # Choose an optimal value from 0.01, 0.001, or 0.0001
         model.compile(
             optimizer=optimizers.legacy.Adam(learning_rate=1e-3),
-            loss="mae",
+            loss='mse',
             metrics=["mae"],
         )
         model.summary()
@@ -172,7 +185,7 @@ class CNN(kt.HyperModel):
         )
         # stop_early = EarlyStopping(monitor='val_loss', patience=5)
         tuner.search(train_dataset, epochs=epochs, validation_data=validation_data)
-
+        tuner.results_summary()
         # Get the optimal hyperparameters
 
         top_n = 4
@@ -208,25 +221,19 @@ class CNN(kt.HyperModel):
             validation_data=self.validation_dataset,
             callbacks=callbacks,
         )
-        # print(history.history.keys())
-        # mae_history = history.history["val_loss"]
-        # train_maes = history.history["loss"]
-        # accuracy_history = history.history["val_accuracy"]
-        # train_accuracy = history.history["accuracy"]
-        # plt.plot(range(1, len(mae_history) + 1), mae_history)
-        # plt.plot(range(1, len(train_maes) + 1), train_maes)
-        # plt.xlabel("Epochs")
-        # plt.ylabel("MAE")
-        # # plt.show()
-        # plt.plot(range(1, len(accuracy_history) + 1), accuracy_history)
-        # plt.plot(range(1, len(train_accuracy) + 1), train_accuracy)
-        # plt.xlabel("Epochs")
-        # plt.ylabel("Accuracy")
-        # plt.show()
+        print(history.history.keys())
+        mae_history = history.history["val_loss"]
+        train_maes = history.history["loss"]
+        plt.plot(mae_history)
+        plt.plot(train_maes)
+        plt.title("MAE Curve")
+        plt.xlabel("Epochs")
+        plt.ylabel("MAE")
+        plt.legend(["Validation MAE", "Train MAE"])
+        plt.show()
+        model.evaluate(self.test_dataset)
         predictions = model.predict(self.test_dataset)
         rounded_predictions = np.round(predictions)
-        mae = np.mean(abs(rounded_predictions - self.test_dataset.labels))
-        print("MAE: ", mae)
         # accuracy = (rounded_predictions == self.test_dataset.labels).count() / len(
         #     self.test_dataset.labels
         # )
@@ -235,6 +242,5 @@ class CNN(kt.HyperModel):
             if rounded_predictions[i] == self.test_dataset.labels[i]:
                 count += 1
         accuracy = count / len(rounded_predictions)
-        print(count)
         print("Accuracy: ", accuracy)
         model.save(model_name)
