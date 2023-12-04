@@ -27,16 +27,19 @@ class DataPreprocess:
             rotation_range=40,
             width_shift_range=0.2,
             height_shift_range=0.2,
-            rescale=1. / 255,
+            rescale=1.0 / 255,
             shear_range=0.2,
-            zoom_range=0.2,
             horizontal_flip=True,
             # validation_split=0.2
         )
-        data_dir = self.data_dir + '/training'
-        train_generator = train_datagen.flow_from_directory(data_dir,
-                                                            target_size=(self.img_height, self.img_width),
-                                                            batch_size=self.batch_size, subset='training')
+        data_dir = self.data_dir + "/training"
+        train_generator = train_datagen.flow_from_directory(
+            data_dir,
+            target_size=(self.img_height, self.img_width),
+            batch_size=self.batch_size,
+            subset="training",
+            class_mode="sparse",
+        )
         return train_generator
 
     def get_validation_data(self):
@@ -45,14 +48,18 @@ class DataPreprocess:
         """
         validation_datagen = image.ImageDataGenerator(
             preprocessing_function=preprocess_input,
-            rescale=1. / 255,
-            validation_split=0.2
+            # featurewise_std_normalization=True,
+            rescale=1.0 / 255,
         )
-        data_dir = self.data_dir + '/validation'
+        data_dir = self.data_dir + "/validation"
 
-        validation_generator = validation_datagen.flow_from_directory(data_dir,
-                                                                      target_size=(self.img_height, self.img_width),
-                                                                      batch_size=self.batch_size, subset='validation')
+        validation_generator = validation_datagen.flow_from_directory(
+            data_dir,
+            target_size=(self.img_height, self.img_width),
+            batch_size=self.batch_size,
+            shuffle=False,
+            class_mode="sparse",
+        )
         return validation_generator
 
     def get_test_data(self):
@@ -61,12 +68,18 @@ class DataPreprocess:
         """
         test_datagen = image.ImageDataGenerator(
             preprocessing_function=preprocess_input,
-            rescale=1. / 255
+            # featurewise_std_normalization=True,
+            rescale=1.0 / 255,
         )
-        data_dir = self.data_dir + '/test'
+        data_dir = self.data_dir + "/test"
 
-        test_generator = test_datagen.flow_from_directory(data_dir, target_size=(self.img_height, self.img_width),
-                                                          batch_size=self.batch_size, shuffle=False)
+        test_generator = test_datagen.flow_from_directory(
+            data_dir,
+            target_size=(self.img_height, self.img_width),
+            batch_size=self.batch_size,
+            class_mode="sparse",
+            shuffle=False,
+        )
         return test_generator
 
     def get_test_data_from_dir(self, test_dir):
@@ -75,13 +88,10 @@ class DataPreprocess:
         :return:
         """
         test_datagen = image.ImageDataGenerator(
-            preprocessing_function=preprocess_input,
-            rescale=1. / 255
+            preprocessing_function=preprocess_input, rescale=1.0 / 255
         )
 
         test_generator = test_datagen.flow_from_directory(
-            test_dir,
-            target_size=(self.img_height, self.img_width),
-            shuffle=False
+            test_dir, target_size=(self.img_height, self.img_width), shuffle=False
         )
         return test_generator

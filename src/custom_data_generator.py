@@ -7,7 +7,7 @@ def get_label(filename):
     """
     Convert the filename into a label.
     """
-    score = filename.split('_')[0]  # assuming filename is SCORE_index.jpg
+    score = filename.split("_")[0]  # assuming filename is SCORE_index.jpg
     return score
 
 
@@ -22,15 +22,15 @@ class CustomDataGenerator:
     def generate(self):
         while True:
             # Select files (paths/indices) for the batch
-            batch_paths = np.random.choice(a=self.filenames,
-                                           size=self.batch_size)
+            batch_paths = np.random.choice(a=self.filenames, size=self.batch_size)
             batch_input = []
             batch_output = []
 
             # Read in each input, perform preprocessing and get labels
             for input_path in batch_paths:
-                input = load_img(self.directory + '/' + input_path,
-                                 target_size=self.target_size)
+                input = load_img(
+                    self.directory + "/" + input_path, target_size=self.target_size
+                )
                 output = get_label(input_path)
 
                 input = img_to_array(input)
