@@ -29,8 +29,9 @@ class DataPreprocess:
             height_shift_range=0.2,
             rescale=1.0 / 255,
             shear_range=0.2,
+            zoom_range=0.2,
             horizontal_flip=True,
-            # validation_split=0.2
+            fill_mode="nearest",
         )
         data_dir = self.data_dir + "/training"
         train_generator = train_datagen.flow_from_directory(

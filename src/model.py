@@ -1,11 +1,11 @@
-from keras import layers
-from keras import models
-from keras import optimizers
+from keras import layers, models, optimizers, initializers, regularizers
 from keras import losses
+import tensorflow as tf
 import keras_tuner as kt
-from keras.callbacks import EarlyStopping
 import matplotlib.pyplot as plt
 import numpy as np
+from keras.callbacks import EarlyStopping
+from tensorflow.python.keras.initializers.initializers_v2 import Initializer
 
 
 class CNN(kt.HyperModel):
@@ -23,6 +23,11 @@ class CNN(kt.HyperModel):
         self.validation_dataset = validation_dataset
         self.test_dataset = test_dataset
         # self.create_model(input_shape)
+
+    def __call__(self, shape, dtype=None, **kwargs):
+        # returns a tensor of shape `shape` and dtype `dtype`
+        # containing values drawn from a distribution of your choice.
+        return tf.random.uniform(shape=shape, dtype=dtype)
 
     def create_model(self, hp):
         """
@@ -98,22 +103,53 @@ class CNN(kt.HyperModel):
         """
         :return:
         """
+        initializer = initializers.GlorotNormal()
         model = models.Sequential()
         model.add(
-            layers.Conv2D(32, (5, 5), activation="relu", input_shape=self.input_shape)
+            layers.Conv2D(
+                32,
+                (5, 5),
+                activation="relu",
+                input_shape=self.input_shape,
+                kernel_initializer=initializer,
+                kernel_regularizer=regularizers.l2(0.001),
+            )
         )
         model.add(layers.BatchNormalization())
         model.add(layers.MaxPooling2D((2, 2)))
-        model.add(layers.Conv2D(64, (5, 5), activation="relu"))
+        model.add(
+            layers.Conv2D(
+                64,
+                (5, 5),
+                activation="relu",
+                kernel_initializer=initializer,
+                kernel_regularizer=regularizers.l2(0.001),
+            )
+        )
         model.add(layers.BatchNormalization())
         model.add(layers.MaxPooling2D((2, 2)))
-        model.add(layers.Conv2D(64, (5, 5), activation="relu"))
+        model.add(
+            layers.Conv2D(
+                64,
+                (5, 5),
+                activation="relu",
+                kernel_initializer=initializer,
+                kernel_regularizer=regularizers.l2(0.001),
+            )
+        )
         model.add(layers.BatchNormalization())
         model.add(layers.Flatten())
-        model.add(layers.Dense(32, activation="leaky_relu"))
+        model.add(
+            layers.Dense(
+                32,
+                activation="relu",
+                kernel_initializer=initializer,
+                kernel_regularizer=regularizers.l2(0.001),
+            )
+        )
 
         # add kernel_regularizer
-        # self.model.add(layers.Dropout(0.5))
+        model.add(layers.Dropout(0.1))
         model.add(layers.Dense(1))
 
         # Tune the learning rate for the optimizer
